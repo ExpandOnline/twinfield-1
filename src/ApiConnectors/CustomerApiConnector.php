@@ -35,8 +35,7 @@ class CustomerApiConnector extends BaseApiConnector
     public function get(string $code, Office $office): Customer
     {
         // Make a request to read a single customer. Set the required values
-        $request_customer = new Request\Read\Customer();
-        $request_customer
+        $request_customer = (new Request\Read\Customer())
             ->setOffice($office->getCode())
             ->setCode($code);
 
@@ -49,41 +48,20 @@ class CustomerApiConnector extends BaseApiConnector
      * Requests all customers from the List Dimension Type.
      *
      * @param Office $office
+	 * @param string $dimType Dimensions type; CRD or DEB.
      * @return array A multidimensional array in the following form:
      *               [$customerId => ['name' => $name, 'shortName' => $shortName], ...]
      *
      * @throws Exception
      */
-    public function listAll(Office $office): array
+    public function listAll(Office $office, $dimType = "DEB"): array
     {
         // Make a request to a list of all customers
-        $request_customers = new Request\Catalog\Dimension($office, "DEB");
+        $request_customers = new Request\Read\Customer($office, null, $dimType);
 
         // Send the Request document and set the response to this instance.
         $response = $this->sendXmlDocument($request_customers);
-
-        // Get the raw response document
-        $responseDOM = $response->getResponseDocument();
-
-        // Prepared empty customer array
-        $customers = [];
-
-        // Store in an array by customer id
-        /** @var \DOMElement $customer */
-        foreach ($responseDOM->getElementsByTagName('dimension') as $customer) {
-            $customer_id = $customer->textContent;
-
-            if ($customer_id == "DEB") {
-                continue;
-            }
-
-            $customers[$customer->textContent] = array(
-                'name' => $customer->getAttribute('name'),
-                'shortName' => $customer->getAttribute('shortname'),
-            );
-        }
-
-        return $customers;
+        return CustomerMapper::map($response);
     }
 
     /**

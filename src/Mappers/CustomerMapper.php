@@ -1,10 +1,10 @@
 <?php
 namespace PhpTwinfield\Mappers;
 
+use DOMNode;
 use PhpTwinfield\Customer;
 use PhpTwinfield\CustomerAddress;
 use PhpTwinfield\CustomerBank;
-use PhpTwinfield\Office;
 use PhpTwinfield\Response\Response;
 
 /**
@@ -17,20 +17,41 @@ use PhpTwinfield\Response\Response;
  */
 class CustomerMapper extends BaseMapper
 {
+
     /**
      * Maps a Response object to a clean Customer entity.
      * 
      * @access public
      * @param \PhpTwinfield\Response\Response $response
-     * @return Customer
+     * @return Customer|Customer[]
      */
     public static function map(Response $response)
-    {
+	{
+		$responseDOM = $response->getResponseDocument();
+		$customers = [];
+		foreach ($responseDOM->getElementsByTagName('dimension') as $customer) {
+			$customers[] = static::createCustomerEntity($customer);
+		}
+		if (count($customers) == 1) {
+			return current($customers);
+		}
+		return $customers;
+	}
+
+	/**
+	 * @param DOMNode $DOMNode
+	 *
+	 * @return Customer
+	 * @throws \PhpTwinfield\Exception
+	 */
+	private static function createCustomerEntity(DOMNode $DOMNode)
+	{
         // Generate new customer object
         $customer = new Customer();
         
         // Gets the raw DOMDocument response.
-        $responseDOM = $response->getResponseDocument();
+        $responseDOM = new \DOMDocument();
+        $responseDOM->loadXML($DOMNode->ownerDocument->saveXML($DOMNode));
 
         // Set the status attribute
         $dimensionElement = $responseDOM->documentElement;
