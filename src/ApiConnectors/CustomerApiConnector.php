@@ -44,6 +44,44 @@ class CustomerApiConnector extends BaseApiConnector
         return CustomerMapper::map($response);
     }
 
+	/**
+	 * Requests all customers from the List Dimension Type.
+	 *
+	 * @param Office $office
+	 * @return array A multidimensional array in the following form:
+	 *               [$customerId => ['name' => $name, 'shortName' => $shortName], ...]
+	 *
+	 * @throws Exception
+	 */
+	public function listAll(Office $office): array
+	{
+		// Make a request to a list of all customers
+		$request_customers = new Request\Catalog\Dimension($office, "DEB");
+
+		// Send the Request document and set the response to this instance.
+		$response = $this->sendXmlDocument($request_customers);
+
+		// Get the raw response document
+		$responseDOM = $response->getResponseDocument();
+
+		// Prepared empty customer array
+		$customers = [];
+
+		// Store in an array by customer id
+		/** @var \DOMElement $customer */
+		foreach ($responseDOM->getElementsByTagName('dimension') as $customer) {
+			$customer_id = $customer->textContent;
+			if ($customer_id == "DEB") {
+				continue;
+			}
+			$customers[$customer->textContent] = array(
+				'name' => $customer->getAttribute('name'),
+				'shortName' => $customer->getAttribute('shortname'),
+			);
+		}
+		return $customers;
+	}
+
     /**
      * Requests all customers from the List Dimension Type.
      *
@@ -54,7 +92,7 @@ class CustomerApiConnector extends BaseApiConnector
      *
      * @throws Exception
      */
-    public function listAll(Office $office, $dimType = "DEB"): array
+    public function getAll(Office $office, $dimType = "DEB"): array
     {
         // Make a request to a list of all customers
         $request_customers = new Request\Read\Customer($office, null, $dimType);
